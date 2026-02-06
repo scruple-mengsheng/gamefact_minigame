@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>墨韵成语 - 中华成语接龙</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #D4C4B0 0%, #E8DDD0 50%, #F5F0E6 100%);
+            font-family: 'KaiTi', 'STKaiti', 'SimSun', serif;
+            overflow: hidden;
+        }
+
+        /* Chinese ink wash style container */
+        #game-container {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            background: #F5F0E6;
+            border-radius: 8px;
+            box-shadow:
+                0 0 0 3px #8B7355,
+                0 0 0 6px #D4C4B0,
+                0 8px 32px rgba(92, 64, 51, 0.3),
+                inset 0 0 100px rgba(139, 115, 85, 0.1);
+            overflow: hidden;
+        }
+
+        /* Paper texture overlay */
+        #game-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background:
+                url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.05'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* Ink wash edge effect */
+        #game-container::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background:
+                radial-gradient(ellipse at 0% 0%, rgba(92, 64, 51, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 100% 0%, rgba(92, 64, 51, 0.1) 0%, transparent 40%),
+                radial-gradient(ellipse at 0% 100%, rgba(92, 64, 51, 0.12) 0%, transparent 45%),
+                radial-gradient(ellipse at 100% 100%, rgba(92, 64, 51, 0.08) 0%, transparent 35%);
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        canvas {
+            display: block;
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Hidden input for Chinese text entry */
+        #text-input {
+            position: absolute;
+            left: 270px;
+            top: 375px;
+            width: 320px;
+            height: 50px;
+            font-size: 24px;
+            font-family: 'KaiTi', 'STKaiti', serif;
+            padding: 8px 12px;
+            border: 2px solid #8B7355;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.95);
+            color: #2C2C2C;
+            outline: none;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s, border-color 0.3s;
+            text-align: center;
+            letter-spacing: 4px;
+        }
+
+        #text-input:focus {
+            border-color: #B22222;
+            box-shadow: 0 0 8px rgba(178, 34, 34, 0.3);
+        }
+
+        #text-input.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* Decorative corners - traditional Chinese style */
+        .corner-decor {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            z-index: 3;
+            opacity: 0.6;
+        }
+
+        .corner-decor::before,
+        .corner-decor::after {
+            content: '';
+            position: absolute;
+            background: #8B7355;
+        }
+
+        .corner-top-left {
+            top: 8px;
+            left: 8px;
+        }
+        .corner-top-left::before {
+            top: 0;
+            left: 0;
+            width: 20px;
+            height: 3px;
+        }
+        .corner-top-left::after {
+            top: 0;
+            left: 0;
+            width: 3px;
+            height: 20px;
+        }
+
+        .corner-top-right {
+            top: 8px;
+            right: 8px;
+        }
+        .corner-top-right::before {
+            top: 0;
+            right: 0;
+            width: 20px;
+            height: 3px;
+        }
+        .corner-top-right::after {
+            top: 0;
+            right: 0;
+            width: 3px;
+            height: 20px;
+        }
+
+        .corner-bottom-left {
+            bottom: 8px;
+            left: 8px;
+        }
+        .corner-bottom-left::before {
+            bottom: 0;
+            left: 0;
+            width: 20px;
+            height: 3px;
+        }
+        .corner-bottom-left::after {
+            bottom: 0;
+            left: 0;
+            width: 3px;
+            height: 20px;
+        }
+
+        .corner-bottom-right {
+            bottom: 8px;
+            right: 8px;
+        }
+        .corner-bottom-right::before {
+            bottom: 0;
+            right: 0;
+            width: 20px;
+            height: 3px;
+        }
+        .corner-bottom-right::after {
+            bottom: 0;
+            right: 0;
+            width: 3px;
+            height: 20px;
+        }
+
+        /* Hint tooltip */
+        #hint-tooltip {
+            position: absolute;
+            background: rgba(44, 44, 44, 0.95);
+            color: #FFF8E7;
+            padding: 12px 16px;
+            border-radius: 6px;
+            font-size: 16px;
+            max-width: 280px;
+            z-index: 200;
+            display: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            line-height: 1.5;
+        }
+
+        #hint-tooltip::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-top: 8px solid rgba(44, 44, 44, 0.95);
+        }
+
+        /* Combo popup animation */
+        @keyframes comboPopup {
+            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+            50% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+        }
+
+        .combo-popup {
+            position: absolute;
+            font-size: 36px;
+            font-weight: bold;
+            color: #FF6B35;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            pointer-events: none;
+            z-index: 150;
+            animation: comboPopup 1s ease-out forwards;
+        }
+
+        /* Ink splash effect */
+        @keyframes inkSplash {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+
+        .ink-splash {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(44,44,44,0.6) 0%, rgba(44,44,44,0) 70%);
+            pointer-events: none;
+            z-index: 5;
+            animation: inkSplash 0.6s ease-out forwards;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div class="corner-decor corner-top-left"></div>
+        <div class="corner-decor corner-top-right"></div>
+        <div class="corner-decor corner-bottom-left"></div>
+        <div class="corner-decor corner-bottom-right"></div>
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <input type="text" id="text-input" placeholder="请输入成语..." maxlength="8">
+        <div id="hint-tooltip"></div>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html>
