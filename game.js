@@ -230,6 +230,7 @@
     let animationFrameId;
     let lastTime = 0;
     let timerInterval = null;
+    let scale = 1; // Scale factor for responsive canvas
 
     // ===========================================
     // ASSET LOADING
@@ -291,12 +292,25 @@
             gameState.highScore = parseInt(savedHighScore, 10);
         }
 
+        // Handle window resize for responsive scaling
+        updateScale();
+        window.addEventListener("resize", updateScale);
+        window.addEventListener("orientationchange", () => {
+            setTimeout(updateScale, 100);
+        });
+
         // Show loading screen and load assets
         showLoadingScreen();
         loadAssets(() => {
             setupEventListeners();
             gameLoop(0);
         });
+    }
+
+    function updateScale() {
+        const container = document.getElementById("game-container");
+        const containerWidth = container.clientWidth;
+        scale = containerWidth / CONFIG.canvas.width;
     }
 
     function showLoadingScreen() {
@@ -334,6 +348,19 @@
 
         // Canvas click events
         canvas.addEventListener("click", handleCanvasClick);
+
+        // Touch events for mobile
+        canvas.addEventListener("touchstart", handleCanvasTouch, { passive: false });
+    }
+
+    function handleCanvasTouch(e) {
+        e.preventDefault();
+        const touch = e.touches[0];
+        const rect = canvas.getBoundingClientRect();
+        const x = (touch.clientX - rect.left) / scale;
+        const y = (touch.clientY - rect.top) / scale;
+
+        handleClick(x, y);
     }
 
     function handleKeyDown(e) {
@@ -353,9 +380,13 @@
 
     function handleCanvasClick(e) {
         const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        const x = (e.clientX - rect.left) / scale;
+        const y = (e.clientY - rect.top) / scale;
 
+        handleClick(x, y);
+    }
+
+    function handleClick(x, y) {
         if (gameState.gameState === "menu") {
             handleMenuClick(x, y);
         } else if (gameState.gameState === "playing") {
@@ -672,8 +703,7 @@
     function showHintTooltip() {
         hintTooltip.textContent = gameState.hintText;
         hintTooltip.style.display = "block";
-        hintTooltip.style.left = "270px";
-        hintTooltip.style.top = "330px";
+        // Position is now handled by CSS percentages
     }
 
     function skipIdiom() {
@@ -866,9 +896,14 @@
     function createInkSplash(x, y) {
         const splash = document.createElement("div");
         splash.className = "ink-splash";
-        splash.style.left = (x - 30) + "px";
-        splash.style.top = (y - 30) + "px";
-        document.getElementById("game-container").appendChild(splash);
+        // Scale the position for responsive layout
+        const container = document.getElementById("game-container");
+        const scaledX = (x / CONFIG.canvas.width) * container.clientWidth;
+        const scaledY = (y / CONFIG.canvas.height) * container.clientHeight;
+        splash.style.left = (scaledX - 30 * scale) + "px";
+        splash.style.top = (scaledY - 30 * scale) + "px";
+        splash.style.transform = `scale(${scale})`;
+        container.appendChild(splash);
         setTimeout(() => splash.remove(), 600);
     }
 
